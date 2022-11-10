@@ -48,7 +48,7 @@ const (
 	breathControllerControl          byte = 0x02
 	footControllerControl            byte = 0x04
 	portamentoTimeControl            byte = 0x05
-	dataEntryMSB                     byte = 0x06
+	dataEntryMSBControl              byte = 0x06
 	channelVolumeControl             byte = 0x07
 	balanceControl                   byte = 0x08
 	panControl                       byte = 0x0A
@@ -99,27 +99,30 @@ const (
 	softPedalControl        byte = 0x43
 	legatoFootswitchControl byte = 0x44
 	hold2Control            byte = 0x45
-	// 0x46 - 0x5F: 7-bit controls for effect depth
-	soundController1Control          byte = 0x46
-	soundController2Control          byte = 0x47
-	soundController3Control          byte = 0x48
-	soundController4Control          byte = 0x49
-	soundController5Control          byte = 0x4A
-	soundController6Control          byte = 0x4B
-	soundController7Control          byte = 0x4C
-	soundController8Control          byte = 0x4D
-	soundController9Control          byte = 0x4E
-	soundController10Control         byte = 0x4F
+	// 0x46 - 0x4F: 7-bit controls for sound controller
+	soundController1Control  byte = 0x46 // Sound Variation (SVC)
+	soundController2Control  byte = 0x47 // Timbre/Harmonic Intensity
+	soundController3Control  byte = 0x48 // Release Time
+	soundController4Control  byte = 0x49 // Attack Time
+	soundController5Control  byte = 0x4A // Brightness
+	soundController6Control  byte = 0x4B
+	soundController7Control  byte = 0x4C
+	soundController8Control  byte = 0x4D
+	soundController9Control  byte = 0x4E
+	soundController10Control byte = 0x4F
+	// 0x46 - 0x53: 7-bit controls for general purpose controllers
 	generalPurposeController5Control byte = 0x50
 	generalPurposeController6Control byte = 0x51
 	generalPurposeController7Control byte = 0x52
 	generalPurposeController8Control byte = 0x53
-	portamentoControlControl         byte = 0x54
-	effects1DepthControl             byte = 0x5B
-	effects2DepthControl             byte = 0x5C
-	effects3DepthControl             byte = 0x5D
-	effects4DepthControl             byte = 0x5E
-	effects5DepthControl             byte = 0x5F
+	// 0x54: 7-bit controls for portamento control
+	portamentoControlControl byte = 0x54
+	// 0x5B - 0x5F: 7-bit controls for effect depth
+	effects1DepthControl byte = 0x5B
+	effects2DepthControl byte = 0x5C
+	effects3DepthControl byte = 0x5D
+	effects4DepthControl byte = 0x5E
+	effects5DepthControl byte = 0x5F
 	// 0x60 - 0x65: Inc/Dec and Parameter numbers
 	dataIncrementControl                   byte = 0x60
 	dataDecrementControl                   byte = 0x61
@@ -129,10 +132,30 @@ const (
 	registeredParameterNumberMSBControl    byte = 0x65
 )
 
+// Registered Parameter numbers
 const (
-	defaultVelocity byte = 0x40
-	onValue         byte = 0x7F
-	offValue        byte = 0x00
+	pitchBendSensitivityRegisteredParameterLSB byte = 0x00 // Cents
+	pitchBendSensitivityRegisteredParameterMSB byte = 0x00 // Semitones
+	fineTuningRegisteredParameterLSB           byte = 0x01
+	fineTuningRegisteredParameterMSB           byte = 0x00
+	coarseTuningRegisteredParameterLSB         byte = 0x02
+	coarseTuningRegisteredParameterMSB         byte = 0x00
+	tuningProgramSelectRegisteredParameterLSB  byte = 0x03
+	tuningProgramSelectRegisteredParameterMSB  byte = 0x00
+	tuningBankSelectRegisteredParameterLSB     byte = 0x04
+	tuningBankSelectRegisteredParameterMSB     byte = 0x00
+)
+
+const (
+	defaultVelocity  byte = 0x40
+	onValue          byte = 0x7F
+	offValue         byte = 0x00
+	fullLeftBalance  byte = 0x00
+	equalBalance     byte = 0x40
+	fullRightBalance byte = 0x7F
+	hardLeftPan      byte = 0x00
+	centerPan        byte = 0x40
+	hardRightPan     byte = 0x7F
 )
 
 func isControlOn(ctrl byte) bool {
@@ -184,6 +207,7 @@ type Msg struct {
 // TODO: Implement Running Status mode optimizations on transmitting side
 // TODO: Capability to do conversion to logarithmic function and back for velocity (or any relevant) inputs
 // TODO: If MSB & LSB of CC are sent, then in subsequent fine tunings only the LSB must be sent. Who stores the state of the MSB, the app or the framework?
+// TODO: Absolute vs relative controller values
 
 // Channel voice messages
 func createNoteOff(ch, note, vel int) (*Msg, error) {
@@ -248,6 +272,18 @@ func createPolyKeyPressure(ch byte, note byte, pressure byte) midiEvent {
 func createControlChange(ch byte, ctrl byte, val byte) midiEvent {
 	return &msg2{
 		status: controlChangeStatus | ch,
+		data0:  ctrl,
+		data1:  val,
+	}
+}
+
+func createGlobalControlChange(basicChannel int, ctrl byte, val byte) midiEvent {
+	globalChannel := basicChannel - 1
+	if globalChannel == 0 {
+		globalChannel = 16
+	}
+	return &msg2{
+		status: controlChangeStatus | byte(globalChannel),
 		data0:  ctrl,
 		data1:  val,
 	}
