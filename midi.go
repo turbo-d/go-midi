@@ -146,6 +146,18 @@ const (
 	tuningBankSelectRegisteredParameterMSB     byte = 0x00
 )
 
+// Channel Mode control numbers
+const (
+	allSoundOffControl         byte = 0x78
+	resetAllControllersControl byte = 0x79
+	localControlControl        byte = 0x7A
+	allNotesOffControl         byte = 0x7B
+	omniOffControl             byte = 0x7C
+	omniOnControl              byte = 0x7D
+	monoOnControl              byte = 0x7E
+	polyOnControl              byte = 0x7F
+)
+
 const (
 	defaultVelocity  byte = 0x40
 	onValue          byte = 0x7F
@@ -311,6 +323,15 @@ func createPitchBendChange(ch byte, lsb byte, msb byte) midiEvent {
 	}
 }
 
+// Channel mode messages
+func createChannelMode(ch byte, ctrl byte, val byte) midiEvent {
+	return &msg2{
+		status: selectChannelModeStatus | ch,
+		data0:  ctrl,
+		data1:  val,
+	}
+}
+
 // System common messages
 func createMIDITimeCodeQtrFrame(msgType int, values int) midiEvent {
 	return &msg1{
@@ -337,5 +358,42 @@ func createSongSelect(song byte) midiEvent {
 func createTuneRequest() midiEvent {
 	return &msg0{
 		status: tuneRequestStatus,
+	}
+}
+
+// System real time messages
+func createTimingClock() midiEvent {
+	return &msg0{
+		status: timingClockStatus,
+	}
+}
+
+func createStart() midiEvent {
+	return &msg0{
+		status: startStatus,
+	}
+}
+
+func createContinue() midiEvent {
+	return &msg0{
+		status: continueStatus,
+	}
+}
+
+func createStop() midiEvent {
+	return &msg0{
+		status: stopStatus,
+	}
+}
+
+func createActiveSensing() midiEvent {
+	return &msg0{
+		status: activeSensingStatus,
+	}
+}
+
+func createSystemReset() midiEvent {
+	return &msg0{
+		status: systemResetStatus,
 	}
 }
